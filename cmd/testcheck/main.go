@@ -339,7 +339,8 @@ func generateAliveYAML(inputPath, outputPath string, aliveNames map[string]int, 
 	for _, item := range alive {
 		sb.WriteString(fmt.Sprintf("  # latency: %dms\n", item.latency))
 		first := true
-		for key, value := range item.proxy {
+		for _, key := range orderedProxyKeys(item.proxy) {
+			value := item.proxy[key]
 			if first {
 				sb.WriteString("  -")
 				first = false
@@ -353,6 +354,43 @@ func generateAliveYAML(inputPath, outputPath string, aliveNames map[string]int, 
 	}
 
 	return atomicWriteText(outputPath, sb.String())
+}
+
+// proxyKeyOrder pins the identifying fields to the top of every proxy block so
+// the output is readable; remaining keys follow alphabetically.
+var proxyKeyOrder = map[string]int{
+	"name":   0,
+	"type":   1,
+	"server": 2,
+	"port":   3,
+	"proto":  4,
+}
+
+// orderedProxyKeys returns the proxy's keys in a deterministic order. Iterating
+// a map directly yields a different order on every run, which rewrites the whole
+// file each regeneration and breaks anyone parsing it by position.
+func orderedProxyKeys(proxy map[string]any) []string {
+	keys := make([]string, 0, len(proxy))
+	for key := range proxy {
+		keys = append(keys, key)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		ri, iRanked := proxyKeyOrder[keys[i]]
+		rj, jRanked := proxyKeyOrder[keys[j]]
+		if !iRanked {
+			ri = len(proxyKeyOrder)
+		}
+		if !jRanked {
+			rj = len(proxyKeyOrder)
+		}
+		if ri != rj {
+			return ri < rj
+		}
+		return keys[i] < keys[j]
+	})
+
+	return keys
 }
 
 func formatYAMLValue(value any) string {
