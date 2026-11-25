@@ -183,6 +183,11 @@ jobs:
             public/mihomo_tested_openvpn.yaml
           retention-days: 7
 
+      - name: Add Clash profile to published output
+        run: |
+          cp clash/vpngate-tested.yaml public/clash_vpngate.yaml
+          test -s public/clash_vpngate.yaml
+
       - name: Publish tested results to gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,52 @@
+# Clash / mihomo 配置：VPN Gate Meridian —— 仅保留"实测存活"的 OpenVPN 节点
+#
+# 数据源（GitHub Actions 每 6 小时重新生成并发布）：
+#   https://wzjwzj11.github.io/vpngate-meridian/mihomo_tested_openvpn.yaml
+#
+# 该文件只包含通过「完整 OpenVPN 握手 + HTTP 204 请求」验证的节点，
+# 比单纯 TCP 端口连通严格得多。最近一次统计：2802 个节点中 521 个存活（18.5%）。
+#
+# 注意：provider 里是 500+ 个 OpenVPN 节点，health-check 必须关闭 ——
+# 否则 mihomo 会对每个节点发起一次真实的 OpenVPN 握手，CPU 和带宽会被打爆。
+
+proxy-providers:
+  vpngate:
+    type: http
+    url: "https://wzjwzj11.github.io/vpngate-meridian/mihomo_tested_openvpn.yaml"
+    interval: 21600          # 6 小时，与 Actions 周期对齐
+    path: ./providers/vpngate_tested.yaml
+    health-check:
+      enable: false
+
+proxy-groups:
+  - name: "VPNGATE"
+    type: select
+    proxies:
+      - "VG-US"
+      - "VG-JP"
+      - "VG-KR"
+      - "VG-OTHER"
+      - "DIRECT"
+
+  - name: "VG-US"
+    type: select
+    use: [vpngate]
+    filter: "^US "
+
+  - name: "VG-JP"
+    type: select
+    use: [vpngate]
+    filter: "^JP "
+
+  - name: "VG-KR"
+    type: select
+    use: [vpngate]
+    filter: "^KR "
+
+  - name: "VG-OTHER"
+    type: select
+    use: [vpngate]
+    exclude-filter: "^(US|JP|KR) "
+
+rules:
+  - MATCH,VPNGATE
